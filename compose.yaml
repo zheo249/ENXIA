@@ -1,5 +1,29 @@
 services:
 
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-studentdb}
+      MYSQL_USER: ${MYSQL_USER:-student}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-studentpass}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 3307 en el host para no chocar con un MySQL local en el 3306.
+      - "3307:3306"
+    volumes:
+      # Volumen con nombre: los datos sobreviven a "docker compose down".
+      - mysql-data:/var/lib/mysql
+      # Crea las tablas la primera vez que se inicializa el volumen.
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
   python-service:
     build:
       context: ./python-api
@@ -16,6 +40,15 @@ services:
       - "8080:8080"
     environment:
       PYTHON_SERVICE_URL: http://python-service:8000
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-studentdb}?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      DB_USER: ${MYSQL_USER:-student}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-studentpass}
     depends_on:
-      - python-service
+      python-service:
+        condition: service_started
+      mysql:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  mysql-data:

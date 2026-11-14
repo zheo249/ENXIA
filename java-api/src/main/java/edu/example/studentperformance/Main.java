@@ -12,7 +12,8 @@ public class Main {
     public static void main(String[] args) throws IOException {
 
         // Las dependencias se conectan de forma explícita para mostrar la relación entre capas.
-        StudentRepository repository = new StudentRepository();
+        Database database = new Database();
+        StudentRepository repository = new StudentRepository(database);
 
         // en desarrollo local se utiliza localhost.
         String predictionServiceUrl = System.getenv("PYTHON_SERVICE_URL");
