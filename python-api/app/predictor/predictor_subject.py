@@ -3,7 +3,7 @@ def calculate_predicted_grade(study_hours: float, type: float) -> float:
 
     if type == "dificil":
         predicted_grade = study_hours * 0.15*0.8
-    if type == "normal":
+    if type == "media":
         predicted_grade = study_hours * 0.15
     if type == "facil":
         predicted_grade = study_hours * 0.15*1.2

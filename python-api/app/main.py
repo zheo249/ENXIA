@@ -9,7 +9,7 @@ app = FastAPI(title="Student Prediction Service")
 
 class PredictionRequest(BaseModel):
     study_hours: float = Field(ge=0)
-    type: str = Field(..., pattern="^(dificil|normal|facil)$")
+    type: str = Field(..., pattern="^(dificil|media|facil)$")
 
 class PredictionResponse(BaseModel):
     predicted_grade: float
