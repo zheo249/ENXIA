@@ -29,6 +29,10 @@ public class Main {
         
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/students", controller);
+        SubjectRepository subjectRepository = new SubjectRepository();
+        SubjectService subjectService = new SubjectService(subjectRepository);
+        SubjectController subjectController = new SubjectController(subjectService);
+        server.createContext("/subjects", subjectController);
         server.createContext("/", new StaticFileHandler());
         server.start();
 

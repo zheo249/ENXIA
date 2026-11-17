@@ -33,7 +33,35 @@
             <h2>Students</h2>
             <div id="student-list"></div>
         </section>
+
+        
+        <section class="panel">
+            <h2>Add subject</h2>
+            <form id="subject-form">
+                <label for="subject-name">Name</label>
+                <input id="subject-name" type="text" required>
+
+                <label for="subject-difficulty">Difficulty</label>
+                <select id="subject-difficulty" required>
+                    <option value="">-- Select --</option>
+                    <option value ="EASY">Fácil</option>
+                    <option value ="MEDIUM">Media</option>
+                    <option value ="HARD">Difícil</option>                                        
+                </select>
+
+                <div class="form-actions">
+                    <button type="submit">Save subject</button>                    
+                </div>
+            </form>
+            <p id ="subject-message" role="status"></p>
+        </section>
+
+        <section class="panel">
+            <h2>Subjects</h2>
+            <div id="subject-list"></div>
+            </section>
     </main>
     <script src="/app.js"></script>
 </body>
 </html>
+

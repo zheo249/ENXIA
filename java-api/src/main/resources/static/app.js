@@ -36,6 +36,13 @@ const cancelEditButton = document.getElementById("cancel-edit");
 const studentList = document.getElementById("student-list");
 const message = document.getElementById("message");
 
+//Codigo añadido
+const subjectForm = document.getElementById("subject-form");
+const subjectNameInput = document.getElementById("subject-name");
+const subjectDifficultySelect = document.getElementById("subject-difficulty");
+const subjectMessage = document.getElementById("subject-message");
+const subjectList = document.getElementById("subject-list");
+
 // Array que contiene los estudiantes obtenidos del servidor.
 //
 // IMPORTANTE: Este array es una copia temporal en el navegador.
@@ -55,6 +62,10 @@ form.addEventListener("submit", saveStudent);
 
 // Cuando pulsa el botón de cancelar, restauramos el formulario.
 cancelEditButton.addEventListener("click", resetForm);
+
+// Codigo añadido; Cuando el usuario envía el formulario de asignaturas,
+// llamamos a saveSubject. 
+subjectForm.addEventListener("submit", saveSubject);
 
 // Al cargar el JavaScript, solicitamos los estudiantes a Java.
 // Esto permite mostrar los estudiantes existentes al abrir la web.
@@ -666,3 +677,203 @@ function showMessage(text, isError) {
         message.classList.remove("error");
     }
 }
+
+
+
+
+// ============================================================
+// HU-03. ASIGNATURAS CODIGO AÑADIDO
+// ============================================================
+
+// Niveles de dificultad que acepta la aplicación.
+const SUBJECT_DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
+
+/*
+ * Se ejecuta al enviar el formulario de asignaturas.
+ *
+ * Valida los datos y, si son correctos, envía:
+ *   POST /subjects
+ */
+async function saveSubject(event) {
+
+    // Evitamos que el navegador recargue la página.
+    event.preventDefault();
+
+    // Si los datos no son válidos, no enviamos nada.
+    if (!validateSubjectForm()) {
+        return;
+    }
+
+    // Objeto con los datos que viajarán a Java.
+    // Los nombres de los campos (name, difficulty) tienen que
+    // coincidir con los que use el backend.
+    const subject = {
+        name: subjectNameInput.value.trim(),
+        difficulty: subjectDifficultySelect.value
+    };
+
+    try {
+
+        const response = await fetch("/subjects", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(subject)
+        });
+
+        // Si Java devuelve un error HTTP, lo mostramos.
+        if (!response.ok) {
+            await showSubjectApiError(response);
+            return;
+        }
+
+        // Todo ha ido bien: limpiamos el formulario.
+        subjectForm.reset();
+        showSubjectMessage("Subject saved.", false);
+        
+        // Volvemos a consultar las asignaturas para mostrar la lista actualizada.
+        await loadSubjects();
+
+    } catch (error) {
+
+        // Error de comunicación con el servidor.
+        showSubjectMessage("Could not save the subject.", true);
+    }
+}
+
+/*
+ * Comprueba los datos del formulario.
+ * Devuelve true si son válidos y false si no.
+ */
+function validateSubjectForm() {
+
+    // trim() elimina espacios iniciales y finales.
+    if (subjectNameInput.value.trim() === "") {
+        showSubjectMessage("Name is required.", true);
+        return false;
+    }
+
+    // includes() comprueba si el valor está en la lista permitida.
+    if (!SUBJECT_DIFFICULTIES.includes(subjectDifficultySelect.value)) {
+        showSubjectMessage("Select a difficulty.", true);
+        return false;
+    }
+
+    return true;
+}
+
+/*
+ * Muestra un mensaje en el panel de asignaturas.
+ * Funciona igual que showMessage, pero con sus propios elementos.
+ */
+function showSubjectMessage(text, isError) {
+
+    subjectMessage.textContent = text;
+
+    if (isError) {
+        subjectMessage.classList.add("error");
+    } else {
+        subjectMessage.classList.remove("error");
+    }
+}
+
+/*
+ * Muestra el error devuelto por la API Java.
+ *
+ * Si la respuesta no es un JSON con { "error": "..." }
+ * (por ejemplo, porque la ruta aún no existe), mostramos
+ * un mensaje genérico con el código HTTP.
+ */
+async function showSubjectApiError(response) {
+
+    try {
+        const errorData = await response.json();
+        showSubjectMessage(errorData.error, true);
+    } catch (error) {
+        showSubjectMessage(
+            "Unexpected error (HTTP " + response.status + ").",
+            true
+        );
+    }
+}
+
+// Texto que se muestra al usuario para cada nivel de dificultad.
+const SUBJECT_LABELS = {
+    EASY: "Fácil",
+    MEDIUM: "Media",
+    HARD: "Difícil"
+};
+
+/*
+ * Recibe un array de asignaturas y genera el HTML
+ * necesario para mostrarlas en pantalla.
+ *
+ * Esta función NO se comunica con Java.
+ */
+function renderSubjects(subjects) {
+
+    // Eliminamos los elementos anteriores de la lista.
+    subjectList.replaceChildren();
+
+    // Si no hay asignaturas, lo indicamos.
+    if (subjects.length === 0) {
+        const emptyMessage = document.createElement("p");
+        emptyMessage.textContent = "No subjects yet.";
+        subjectList.appendChild(emptyMessage);
+        return;
+    }
+
+    for (let index = 0; index < subjects.length; index++) {
+
+        const subject = subjects[index];
+
+        // Una tarjeta por asignatura, con el mismo estilo
+        // que las de los estudiantes.
+        const card = document.createElement("article");
+        card.className = "student-card";
+
+        const name = document.createElement("strong");
+        name.textContent = subject.name;
+
+        // Si llega un valor que no conocemos, mostramos el original.
+        const difficulty = document.createElement("p");
+        difficulty.textContent = "Difficulty: " +
+            (SUBJECT_LABELS[subject.difficulty] || subject.difficulty);
+
+        card.appendChild(name);
+        card.appendChild(difficulty);
+        subjectList.appendChild(card);
+    }
+}
+
+/*
+ * Obtiene las asignaturas desde la API Java.
+ *
+ * GET /subjects
+ */
+async function loadSubjects() {
+
+    try {
+
+        const response = await fetch("/subjects");
+
+        // Si Java devuelve un error HTTP, lo mostramos.
+        if (!response.ok) {
+            await showSubjectApiError(response);
+            return;
+        }
+
+        // Convertimos el JSON recibido en un array de asignaturas.
+        const subjects = await response.json();
+
+        renderSubjects(subjects);
+
+    } catch (error) {
+
+        showSubjectMessage("Could not load subjects.", true);
+    }
+}
+
+// Al cargar la página, solicitamos las asignaturas existentes.
+loadSubjects();
