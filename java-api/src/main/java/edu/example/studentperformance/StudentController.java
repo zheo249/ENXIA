@@ -500,14 +500,13 @@ public class StudentController implements HttpHandler {
      * IMPORTANTE:
      * El navegador nunca se comunica directamente con Python.
      */
-    private void handlePrediction(
+private void handlePrediction(
             HttpExchange exchange,
             String method,
             int id) throws IOException {
 
         // Para solicitar una predicción únicamente permitimos GET.
         if (!"GET".equals(method)) {
-
             sendError(exchange, 405, "Method not allowed");
             return;
         }
@@ -516,81 +515,44 @@ public class StudentController implements HttpHandler {
         Student student = service.getStudent(id);
 
         if (student == null) {
-
-            // Si el estudiante no existe, devolvemos HTTP 404.
             sendError(exchange, 404, "Student not found");
             return;
         }
 
         try {
-
-            // Solicitamos la predicción a StudentService.
-            //
-            // Internamente, StudentService utilizará
-            // PredictionClient para comunicarse con Python.
-            //
-            // El resultado es un número decimal (double).
+            // Predicción general (primera matrícula o general si no tiene asignaturas)
             double predictedGrade = service.predictGrade(id);
 
-            // Construimos manualmente el objeto JSON
-            // que devolveremos al navegador.
-            JsonObject response = new JsonObject();
+            // Predicciones individualizadas para cada asignatura matriculada (HU-02)
+            var subjectPredictions = service.predictAllSubjects(id);
 
-            // Añadimos los datos del estudiante.
+            // Construimos el objeto JSON que devolveremos al navegador.
+            JsonObject response = new JsonObject();
             response.addProperty("id", student.getId());
             response.addProperty("name", student.getName());
-            response.addProperty(
-                    "studyHours",
-                    student.getStudyHours()
-            );
-
-            // Añadimos la nota estimada por Python.
+            response.addProperty("studyHours", student.getStudyHours());
             response.addProperty("predictedGrade", predictedGrade);
+            response.add("predictions", gson.toJsonTree(subjectPredictions));
 
-            // La respuesta tendrá un formato parecido a:
-            //
+            // Ejemplo de respuesta:
             // {
             //     "id": 1,
             //     "name": "Ana",
             //     "studyHours": 5,
-            //     "predictedGrade": 7.5
+            //     "predictedGrade": 72.0,
+            //     "predictions": [
+            //         { "subjectId": 1, "subjectName": "Física", "difficulty": "dificil", "studyHours": 4, "predictedGrade": 56.0 },
+            //         { "subjectId": 2, "subjectName": "Historia", "difficulty": "facil", "studyHours": 3, "predictedGrade": 84.0 }
+            //     ]
             // }
-            //
-            // Convertimos el objeto a JSON y devolvemos HTTP 200.
             sendJson(exchange, 200, gson.toJson(response));
 
         } catch (InterruptedException exception) {
-
-            // La comunicación con Python puede ser interrumpida
-            // mientras esperamos a que termine la operación.
-            //
-            // Restauramos la marca de interrupción del hilo
-            // para que pueda ser detectada posteriormente.
             Thread.currentThread().interrupt();
-
-            // Respondemos al cliente indicando que el servicio
-            // de predicción no está disponible.
-            //
-            // HTTP 503 = Service Unavailable.
-            sendError(
-                    exchange,
-                    503,
-                    "Prediction service is unavailable"
-            );
+            sendError(exchange, 503, "Prediction service is unavailable");
 
         } catch (IOException exception) {
-
-            // Si ocurre un problema de comunicación con Python,
-            // por ejemplo porque su servidor está apagado,
-            // devolvemos HTTP 503.
-            //
-            // El controlador transforma el problema interno
-            // en una respuesta HTTP comprensible para el navegador.
-            sendError(
-                    exchange,
-                    503,
-                    "Prediction service is unavailable"
-            );
+            sendError(exchange, 503, "Prediction service is unavailable");
         }
     }
 

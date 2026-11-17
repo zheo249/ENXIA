@@ -1,8 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package edu.example.studentperformance;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.sun.net.httpserver.HttpExchange;
@@ -11,10 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/**
- *
- * @author Acer
- */
 public class SubjectController implements HttpHandler {
 
     private final SubjectService service;
@@ -38,14 +31,12 @@ public class SubjectController implements HttpHandler {
             }
 
             if ("POST".equals(method)) {
-
                 InputStreamReader reader = new InputStreamReader(
                         exchange.getRequestBody(),
                         StandardCharsets.UTF_8
                 );
 
                 Subject subject = gson.fromJson(reader, Subject.class);
-
                 Subject created = service.createSubject(subject);
 
                 sendJson(exchange, 201, gson.toJson(created));
@@ -59,6 +50,10 @@ public class SubjectController implements HttpHandler {
 
         } catch (IllegalArgumentException exception) {
             sendError(exchange, 400, exception.getMessage());
+
+        } catch (DataAccessException exception) {
+            exception.printStackTrace();
+            sendError(exchange, 503, "Database is unavailable");
         }
     }
 
