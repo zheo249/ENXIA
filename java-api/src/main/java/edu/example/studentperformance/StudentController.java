@@ -33,7 +33,7 @@ import java.nio.charset.StandardCharsets;
  *                                      |
  *                               StudentRepository
  *                                      |
- *                                   HashMap
+ *                                  MySQL
  *
  * El resultado vuelve siguiendo el camino inverso.
  *
@@ -130,6 +130,14 @@ public class StudentController implements HttpHandler {
             // Si no podemos convertir el identificador a entero,
             // devolvemos HTTP 400 (Bad Request).
             sendError(exchange, 400, "Invalid student identifier");
+
+        } catch (DataAccessException exception) {
+
+            // Si MySQL no responde o falla una consulta, el cliente
+            // recibe HTTP 503 (Service Unavailable) en lugar de un
+            // error interno sin explicar. El detalle queda en el log.
+            exception.printStackTrace();
+            sendError(exchange, 503, "Database is unavailable");
         }
     }
 

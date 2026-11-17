@@ -1,6 +1,6 @@
 # Predictor del rendimiento de estudiantes
 
-Student Performance Predictor es un ejemplo para aprender arquitectura de software en el aula. Un navegador utiliza una API HTTP en Java para gestionar estudiantes, la API almacena los estudiantes en memoria y coordina las peticiones, y un servicio independiente en Python calcula una nota prevista ficticia. Este diseño deliberadamente pequeño permite observar las responsabilidades de presentación, negocio, almacenamiento y servicios externos sin introducir infraestructura de producción.
+Student Performance Predictor es un ejemplo para aprender arquitectura de software en el aula. Un navegador utiliza una API HTTP en Java para gestionar estudiantes, la API almacena los estudiantes en MySQL y coordina las peticiones, y un servicio independiente en Python calcula una nota prevista ficticia. Este diseño deliberadamente pequeño permite observar las responsabilidades de presentación, negocio, almacenamiento y servicios externos sin introducir infraestructura de producción.
 
 ## Arquitectura
 
@@ -9,7 +9,11 @@ Navegador (HTML, CSS, JavaScript)
             |
             | HTTP en el puerto 8080
             v
-API Java (HttpServer y HashMap)
+API Java (HttpServer y JDBC)
+            |
+            | JDBC en el puerto 3306
+            v
+Base de datos MySQL
             |
             | POST /predict en el puerto 8000
             v
@@ -23,10 +27,17 @@ El navegador se comunica únicamente con Java. Java también sirve el frontend, 
 - JDK 21 o posterior
 - Maven 3.9 o posterior
 - Python 3.11 o posterior
+- Docker (para MySQL, incluso al ejecutar Java y Python en local)
 
 ## Ejecución en línea de comandos
 
-Abre la carpeta del repositorio. Después, abre dos terminales.
+Abre la carpeta del repositorio. Primero arranca solo MySQL (queda publicado en el puerto 3307 del equipo):
+
+```text
+docker compose up -d mysql
+```
+
+Después, abre dos terminales.
 
 En la primera terminal, inicia Python. Los siguientes comandos de PowerShell funcionan en Windows:
 
@@ -60,7 +71,7 @@ Abre estas direcciones:
 - Aplicación web: <http://localhost:8080>
 - Documentación interactiva de la API de Python: <http://localhost:8000/docs>
 
-Los datos de los estudiantes se almacenan únicamente en memoria y se eliminan cada vez que se detiene el proceso de Java.
+Los datos se guardan en MySQL, en un volumen de Docker (`mysql-data`), y se conservan aunque se detengan o reinicien los contenedores. Para borrarlos y empezar de cero: `docker compose down -v`.
 
 ## Ejecución con Docker Compose
 
@@ -70,7 +81,9 @@ Como alternativa a la ejecución manual, puedes construir e iniciar los servicio
 docker compose up --build
 ```
 
-Abre la aplicación en <http://localhost:8080>. La documentación interactiva del servicio de Python continúa disponible en <http://localhost:8000/docs>. Dentro de Docker, Java utiliza el nombre de servicio `python-service` para comunicarse con Python.
+Abre la aplicación en <http://localhost:8080>. La documentación interactiva del servicio de Python continúa disponible en <http://localhost:8000/docs>. Dentro de Docker, Java utiliza el nombre de servicio `python-service` para comunicarse con Python y `mysql` para comunicarse con la base de datos.
+
+La configuración de MySQL (usuario, contraseña, nombre de la base de datos) tiene valores por defecto en `compose.yaml`; para cambiarlos copia `.env.example` como `.env`. El esquema de tablas está en `db/init.sql` y solo se aplica al crear el volumen: tras modificarlo, ejecuta `docker compose down -v` y vuelve a levantar los servicios.
 
 Para detener y eliminar los contenedores:
 
@@ -137,6 +150,6 @@ El repositorio mantiene una única versión final del código en lugar de tres c
 | GET | `/students/{id}/prediction` | `200` | Solicitar una predicción ficticia |
 | POST | `/predict` de Python | `200` | Calcular una predicción ficticia |
 
-Java devuelve `400` cuando la entrada no es válida, `404` para un estudiante o una ruta desconocidos, `405` para un método no permitido y `503` cuando el servicio de Python no está disponible.
+Java devuelve `400` cuando la entrada no es válida, `404` para un estudiante o una ruta desconocidos, `405` para un método no permitido y `503` cuando el servicio de Python o la base de datos no están disponibles.
 
 
