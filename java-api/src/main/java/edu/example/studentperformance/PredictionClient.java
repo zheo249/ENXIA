@@ -9,11 +9,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
+import java.text.Normalizer;
 
 /**
  * Encapsula la comunicación HTTP con el servicio de predicción escrito en
  * Python.
  */
+
 public class PredictionClient {
     private final String serviceUrl;
     private final HttpClient httpClient;
@@ -25,12 +27,11 @@ public class PredictionClient {
         gson = new Gson();
     }
 
-    public double requestPrediction(double studyHours) throws IOException, InterruptedException {
-        // El nombre study_hours forma parte del contrato JSON de la API de Python.
+    public double requestPrediction(double studyHours, String difficulty) throws IOException, InterruptedException {
         JsonObject requestData = new JsonObject();
         requestData.addProperty("study_hours", studyHours);
+        requestData.addProperty("type", normalizeDifficulty(difficulty));
 
-        // El constructor se configura paso a paso para que cada parte sea visible.
         URI predictionUri = URI.create(serviceUrl + "/predict");
         String requestBody = gson.toJson(requestData);
         Builder requestBuilder = HttpRequest.newBuilder();
@@ -39,16 +40,28 @@ public class PredictionClient {
         requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody));
         HttpRequest request = requestBuilder.build();
 
-        // send realiza la llamada de forma síncrona y devuelve la respuesta completa.
         HttpResponse<String> response = httpClient.send(
                 request,
                 HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            throw new IOException("Prediction service returned an error");
+            throw new IOException("Prediction service returned an error: " + response.statusCode());
         }
 
-        // Gson transforma la respuesta JSON para poder obtener predicted_grade.
         JsonObject responseData = gson.fromJson(response.body(), JsonObject.class);
         return responseData.get("predicted_grade").getAsDouble();
+    }
+
+    private String normalizeDifficulty(String difficulty) {
+        if (difficulty == null || difficulty.isBlank()) {
+            return "media";
+        }
+        String normalized = Normalizer.normalize(difficulty.trim().toLowerCase(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+
+        return switch (normalized) {
+            case "easy", "facil" -> "facil";
+            case "hard", "dificil" -> "dificil";
+            default -> "media";
+        };
     }
 }

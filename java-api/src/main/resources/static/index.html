@@ -18,8 +18,15 @@
                 <label for="student-name">Name</label>
                 <input id="student-name" type="text" required>
 
-                <label for="study-hours">Study hours</label>
-                <input id="study-hours" type="number" min="0" step="0.5" required>
+                <label for="study-hours">General study hours</label>
+                <input id="study-hours" type="number" min="0" step="0.5" value="0" required>
+
+                <fieldset class="subjects-fieldset">
+                    <legend>Subjects &amp; study hours (HU-04)</legend>
+                    <div id="student-subjects-container">
+                        <p class="muted">No subjects available yet.</p>
+                    </div>
+                </fieldset>
 
                 <div class="form-actions">
                     <button type="submit">Save student</button>
@@ -34,7 +41,6 @@
             <div id="student-list"></div>
         </section>
 
-        
         <section class="panel">
             <h2>Add subject</h2>
             <form id="subject-form">
@@ -44,24 +50,23 @@
                 <label for="subject-difficulty">Difficulty</label>
                 <select id="subject-difficulty" required>
                     <option value="">-- Select --</option>
-                    <option value ="EASY">Fácil</option>
-                    <option value ="MEDIUM">Media</option>
-                    <option value ="HARD">Difícil</option>                                        
+                    <option value="EASY">Fácil</option>
+                    <option value="MEDIUM">Media</option>
+                    <option value="HARD">Difícil</option>
                 </select>
 
                 <div class="form-actions">
-                    <button type="submit">Save subject</button>                    
+                    <button type="submit">Save subject</button>
                 </div>
             </form>
-            <p id ="subject-message" role="status"></p>
+            <p id="subject-message" role="status"></p>
         </section>
 
         <section class="panel">
             <h2>Subjects</h2>
             <div id="subject-list"></div>
-            </section>
+        </section>
     </main>
     <script src="/app.js"></script>
 </body>
 </html>
-

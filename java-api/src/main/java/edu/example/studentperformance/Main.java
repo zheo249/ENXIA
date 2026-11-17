@@ -14,6 +14,7 @@ public class Main {
         // Las dependencias se conectan de forma explícita para mostrar la relación entre capas.
         Database database = new Database();
         StudentRepository repository = new StudentRepository(database);
+        SubjectRepository subjectRepository = new SubjectRepository(database);
 
         // en desarrollo local se utiliza localhost.
         String predictionServiceUrl = System.getenv("PYTHON_SERVICE_URL");
@@ -23,13 +24,11 @@ public class Main {
             predictionServiceUrl = "http://localhost:8000";
         }
         PredictionClient predictionClient = new PredictionClient(predictionServiceUrl);
-        StudentService service = new StudentService(repository, predictionClient);
+        StudentService service = new StudentService(repository, subjectRepository, predictionClient);
         StudentController controller = new StudentController(service);
 
-        
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/students", controller);
-        SubjectRepository subjectRepository = new SubjectRepository();
         SubjectService subjectService = new SubjectService(subjectRepository);
         SubjectController subjectController = new SubjectController(subjectService);
         server.createContext("/subjects", subjectController);
