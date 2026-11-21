@@ -29,7 +29,7 @@ public class CourseService {
 
     public Course createCourse(Course course) {
         validate(course);
-        if (repository.existsByAcademicYear(course.getAcademicYear(), 0)) {
+        if (repository.existsByName(course.getName(), 0)) {
             throw new ConflictException("Ya existe un curso académico con ese nombre");
         }
         return repository.create(course);
@@ -38,7 +38,7 @@ public class CourseService {
     public Course updateCourse(int id, Course course) {
         getCourse(id);
         validate(course);
-        if (repository.existsByAcademicYear(course.getAcademicYear(), id)) {
+        if (repository.existsByName(course.getName(), id)) {
             throw new ConflictException("Ya existe un curso académico con ese nombre");
         }
         repository.update(id, course);
@@ -58,10 +58,10 @@ public class CourseService {
         if (course == null) {
             throw new IllegalArgumentException("El curso no puede estar vacío");
         }
-        if (course.getAcademicYear() == null || course.getAcademicYear().isBlank()) {
+        if (course.getName() == null || course.getName().isBlank()) {
             throw new IllegalArgumentException("El nombre del curso es obligatorio");
         }
-        course.setAcademicYear(course.getAcademicYear().trim());
+        course.setName(course.getName().trim());
 
         LocalDate start = parseDate(course.getStartDate(), "inicio");
         LocalDate end = parseDate(course.getEndDate(), "finalización");

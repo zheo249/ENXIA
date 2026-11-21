@@ -5,22 +5,22 @@ package edu.example.studentperformance;
  */
 public class Course {
     private int id;
-    private String academicYear;
+    private String name;
     private String startDate;
     private String endDate;
 
     public Course() {
     }
 
-    public Course(String academicYear, String startDate, String endDate) {
-        this.academicYear = academicYear;
+    public Course(String name, String startDate, String endDate) {
+        this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
-    public Course(int id, String academicYear, String startDate, String endDate) {
+    public Course(int id, String name, String startDate, String endDate) {
         this.id = id;
-        this.academicYear = academicYear;
+        this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
     }
@@ -33,12 +33,12 @@ public class Course {
         this.id = id;
     }
 
-    public String getAcademicYear() {
-        return academicYear;
+    public String getName() {
+        return name;
     }
 
-    public void setAcademicYear(String academicYear) {
-        this.academicYear = academicYear;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getStartDate() {
