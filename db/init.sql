@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS subjects (
     difficulty ENUM('facil', 'media', 'dificil') NOT NULL
 );
 
+-- Nueva tabla para la HU-01 de la practica 7: Gestión de cursos académicos
+CREATE TABLE IF NOT EXISTS courses (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    name       VARCHAR(50) NOT NULL UNIQUE,
+    start_date DATE NOT NULL,
+    end_date   DATE NOT NULL,
+    CONSTRAINT chk_courses_dates CHECK (end_date > start_date)
+);
+
 -- Matricula: relacion N:M entre estudiantes y asignaturas.
 -- Cada fila guarda las horas de estudio de ese estudiante en esa asignatura.
 -- Modificación de la tabla existente para HU-01 y HU-02
@@ -34,13 +43,4 @@ CREATE TABLE IF NOT EXISTS enrollments (
         REFERENCES courses (id) ON DELETE RESTRICT, -- Impide borrar un curso si tiene matrículas (HU-01)
     CONSTRAINT chk_enrollments_study_hours CHECK (study_hours >= 0),
     CONSTRAINT chk_enrollments_grade CHECK (grade >= 0 AND grade <= 100) -- La nota debe estar entre 0 y 100 (HU-02)
-);
-
--- Nueva tabla para la HU-01 de la practica 7: Gestión de cursos académicos
-CREATE TABLE IF NOT EXISTS courses (
-    id         INT AUTO_INCREMENT PRIMARY KEY,
-    name       VARCHAR(50) NOT NULL UNIQUE,
-    start_date DATE NOT NULL,
-    end_date   DATE NOT NULL,
-    CONSTRAINT chk_courses_dates CHECK (end_date > start_date)
 );
