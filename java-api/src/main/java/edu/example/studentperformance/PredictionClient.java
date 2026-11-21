@@ -28,9 +28,19 @@ public class PredictionClient {
     }
 
     public double requestPrediction(double studyHours, String difficulty) throws IOException, InterruptedException {
+        return requestPrediction(studyHours, difficulty, null);
+    }
+
+    public double requestPrediction(
+            double studyHours,
+            String difficulty,
+            Course course) throws IOException, InterruptedException {
         JsonObject requestData = new JsonObject();
         requestData.addProperty("study_hours", studyHours);
         requestData.addProperty("type", normalizeDifficulty(difficulty));
+        if (course != null) {
+            requestData.add("course", gson.toJsonTree(course));
+        }
 
         URI predictionUri = URI.create(serviceUrl + "/predict");
         String requestBody = gson.toJson(requestData);
