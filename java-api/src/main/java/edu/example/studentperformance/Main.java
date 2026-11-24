@@ -1,36 +1,33 @@
 package edu.example.studentperformance;
 
 import com.sun.net.httpserver.HttpServer;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
- * Punto de entrada que crea los objetos de la aplicación y arranca el servidor HTTP.
+ * Punto de entrada que crea los objetos de la aplicacion y arranca el servidor HTTP.
  */
 public class Main {
     public static void main(String[] args) throws IOException {
-
-        // Las dependencias se conectan de forma explícita para mostrar la relación entre capas.
+        // Obtenemos la configuracion centralizada.
+        AppConfig config = AppConfig.getInstance();
+        // Las dependencias se conectan de forma explicita.
         Database database = new Database();
         StudentRepository repository = new StudentRepository(database);
         SubjectRepository subjectRepository = new SubjectRepository(database);
 
-        // en desarrollo local se utiliza localhost.
-        String predictionServiceUrl = System.getenv("PYTHON_SERVICE_URL");
-        if (predictionServiceUrl == null) {
-            predictionServiceUrl = "http://localhost:8000";
-        } else if (predictionServiceUrl.isBlank()) {
-            predictionServiceUrl = "http://localhost:8000";
-        }
+        // Obtenemos la direccion del microservicio de predicciones.
+        String predictionServiceUrl = config.getPredictionServiceUrl();
         PredictionClient predictionClient = new PredictionClient(predictionServiceUrl);
         StudentService service = new StudentService(repository, subjectRepository, predictionClient);
         StudentController controller = new StudentController(service);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/students", controller);
+
         SubjectService subjectService = new SubjectService(subjectRepository);
         SubjectController subjectController = new SubjectController(subjectService);
+        
         server.createContext("/subjects", subjectController);
         server.createContext("/", new StaticFileHandler());
         server.start();

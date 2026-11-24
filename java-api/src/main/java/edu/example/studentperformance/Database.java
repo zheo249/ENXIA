@@ -12,31 +12,19 @@ import java.sql.SQLException;
  * defecto, que apuntan al MySQL publicado por Compose en el puerto 3307.
  */
 public class Database {
-    private final String url;
-    private final String user;
-    private final String password;
+    private final AppConfig config;
 
     public Database() {
-        this.url = env("DB_URL",
-                "jdbc:mysql://localhost:3307/studentdb"
-                        + "?useUnicode=true&characterEncoding=utf8"
-                        + "&allowPublicKeyRetrieval=true&useSSL=false");
-        this.user = env("DB_USER", "student");
-        this.password = env("DB_PASSWORD", "studentpass");
+        this.config = AppConfig.getInstance();
     }
 
     /**
      * Abre una conexion nueva. Quien la pide debe cerrarla (try-with-resources).
      */
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
-    }
-
-    private static String env(String name, String defaultValue) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        return value;
+        return DriverManager.getConnection(
+                config.getDbUrl(),
+                config.getDbUser(),
+                config.getDbPassword());
     }
 }
