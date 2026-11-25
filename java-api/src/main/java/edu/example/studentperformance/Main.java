@@ -32,6 +32,9 @@ public class Main {
         SubjectService subjectService = new SubjectService(subjectRepository);
         SubjectController subjectController = new SubjectController(subjectService);
         server.createContext("/subjects", subjectController);
+        CourseRepository courseRepository = new CourseRepository(database);
+        CourseService courseService = new CourseService(courseRepository);
+        server.createContext("/courses", new CourseController(courseService));
         server.createContext("/", new StaticFileHandler());
         server.start();
 

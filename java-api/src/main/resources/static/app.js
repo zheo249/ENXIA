@@ -36,6 +36,8 @@ subjectForm.addEventListener("submit", saveSubject);
 // Carga inicial
 loadSubjects();
 loadStudents();
+loadCourses(); // Para la HU-01 (gestión de cursos académicos) practica 7
+
 
 
 // ============================================================
@@ -514,3 +516,263 @@ async function loadSubjects() {
         showSubjectMessage("Could not load subjects.", true);
     }
 }
+
+// ============================================================
+// 3. GESTIÓN DE CURSOS ACADÉMICOS (HU-01) para practica 7
+// ============================================================
+
+const courseForm = document.getElementById("course-form");
+const courseIdInput = document.getElementById("course-id");
+const courseNameInput = document.getElementById("course-name");
+const courseStartDateInput = document.getElementById("course-start-date");
+const courseEndDateInput = document.getElementById("course-end-date");
+const courseFormTitle = document.getElementById("course-form-title");
+const cancelCourseEditButton = document.getElementById("cancel-course-edit");
+const courseMessage = document.getElementById("course-message");
+const courseList = document.getElementById("course-list");
+
+let currentCourses = [];
+
+courseForm.addEventListener("submit", saveCourse);
+cancelCourseEditButton.addEventListener("click", resetCourseForm);
+
+// Recuerda añadir también loadCourses(); arriba donde se llaman loadSubjects() y loadStudents()
+
+// Convierte "YYYY-MM-DD" (del <input type="date">) a "DD-MM-YYYY" (para enviar al backend)
+function formatToDDMMYYYY(isoDate) {
+    if (!isoDate || !isoDate.includes("-")) return isoDate;
+    const [year, month, day] = isoDate.split("-");
+    return `${day}-${month}-${year}`;
+}
+
+// Convierte "DD-MM-YYYY" o "DD/MM/YYYY" (que llega del backend) a "YYYY-MM-DD" (para el <input type="date">)
+function formatToYYYYMMDD(dmyDate) {
+    if (!dmyDate) return dmyDate;
+    const separator = dmyDate.includes("-") ? "-" : (dmyDate.includes("/") ? "/" : null);
+    if (!separator) return dmyDate;
+    const parts = dmyDate.split(separator);
+    if (parts[0].length === 4) return dmyDate; // Ya viene en YYYY-MM-DD
+    const [day, month, year] = parts;
+    return `${year}-${month}-${day}`;
+}
+
+async function loadCourses() {
+    try {
+        const response = await fetch("/courses");
+        if (!response.ok) {
+            await showCourseApiError(response);
+            return;
+        }
+        const courses = await response.json();
+        currentCourses = courses;
+        renderCourses(courses);
+    } catch (error) {
+        showCourseMessage("Could not load academic courses.", true);
+    }
+}
+
+function validateCourseForm() {
+    const name = courseNameInput.value.trim();
+    const startDate = courseStartDateInput.value;
+    const endDate = courseEndDateInput.value;
+
+    if (!name || !startDate || !endDate) {
+        showCourseMessage("All fields (name, start date, end date) are required.", true);
+        return false;
+    }
+
+    // Se compara en formato YYYY-MM-DD antes de convertir, para que la ordenación sea cronológica
+    if (endDate <= startDate) {
+        showCourseMessage("End date must be after start date.", true);
+        return false;
+    }
+
+    return true;
+}
+
+async function saveCourse(event) {
+    event.preventDefault();
+
+    if (!validateCourseForm()) {
+        return;
+    }
+
+    const id = courseIdInput.value;
+    const course = {
+        name: courseNameInput.value.trim(),
+        // El backend Java espera fechas aaaa-mm-dd, justo el valor de <input type="date">.
+        startDate: courseStartDateInput.value,
+        endDate: courseEndDateInput.value
+    };
+
+    const url = id === "" ? "/courses" : "/courses/" + id;
+    const method = id === "" ? "POST" : "PUT";
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(course)
+        });
+
+        if (!response.ok) {
+            await showCourseApiError(response);
+            return;
+        }
+
+        resetCourseForm();
+        showCourseMessage("Academic course saved.", false);
+        await loadCourses();
+    } catch (error) {
+        showCourseMessage("Could not save the academic course.", true);
+    }
+}
+
+function renderCourses(courses) {
+    courseList.replaceChildren();
+
+    if (courses.length === 0) {
+        const emptyMessage = document.createElement("p");
+        emptyMessage.textContent = "No academic courses yet.";
+        courseList.appendChild(emptyMessage);
+        return;
+    }
+
+    for (const course of courses) {
+        const card = document.createElement("article");
+        card.className = "student-card";
+
+        const name = document.createElement("strong");
+        name.textContent = course.name;
+
+        const dates = document.createElement("p");
+        // La API devuelve aaaa-mm-dd; al usuario se la mostramos como dd-mm-aaaa.
+        dates.textContent = `From ${formatToDDMMYYYY(course.startDate)} to ${formatToDDMMYYYY(course.endDate)}`;
+
+        const actions = document.createElement("div");
+        actions.className = "student-actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => startEditCourse(course));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => deleteCourse(course.id));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+
+        card.appendChild(name);
+        card.appendChild(dates);
+        card.appendChild(actions);
+        courseList.appendChild(card);
+    }
+}
+
+function startEditCourse(course) {
+    courseIdInput.value = course.id;
+    courseNameInput.value = course.name;
+    courseStartDateInput.value = formatToYYYYMMDD(course.startDate);
+    courseEndDateInput.value = formatToYYYYMMDD(course.endDate);
+
+    if (courseFormTitle) courseFormTitle.textContent = "Edit academic course";
+    cancelCourseEditButton.classList.remove("hidden");
+    courseNameInput.focus();
+}
+
+async function deleteCourse(courseId) {
+    try {
+        const response = await fetch("/courses/" + courseId, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            await showCourseApiError(response);
+            return;
+        }
+
+        showCourseMessage("Academic course deleted.", false);
+        await loadCourses();
+    } catch (error) {
+        showCourseMessage("Could not delete the academic course.", true);
+    }
+}
+
+function resetCourseForm() {
+    courseForm.reset();
+    courseIdInput.value = "";
+    if (courseFormTitle) courseFormTitle.textContent = "Add academic course";
+    cancelCourseEditButton.classList.add("hidden");
+}
+
+function showCourseMessage(text, isError) {
+    courseMessage.textContent = text;
+    if (isError) {
+        courseMessage.classList.add("error");
+    } else {
+        courseMessage.classList.remove("error");
+    }
+}
+
+async function showCourseApiError(response) {
+    try {
+        const errorData = await response.json();
+        showCourseMessage(errorData.error, true);
+    } catch (error) {
+        showCourseMessage("Unexpected error (HTTP " + response.status + ").", true);
+    }
+}
+
+
+// ============================================================
+// 4. PESTAÑAS (Students / Subjects / Courses)
+// ============================================================
+
+/*
+ * Cada botón de la barra de pestañas tiene data-tab="nombre" y cada
+ * panel tiene id="tab-nombre". Al pulsar un botón se muestra su panel
+ * y se ocultan los demás con la clase CSS "hidden".
+ *
+ * La pestaña activa se guarda en la URL (#courses, #subjects...) para
+ * que al recargar la página se siga viendo la misma pestaña.
+ */
+const tabButtons = document.querySelectorAll(".tab-button");
+const tabPanels = document.querySelectorAll(".tab-panel");
+
+function showTab(name) {
+    let found = false;
+    for (const button of tabButtons) {
+        if (button.dataset.tab === name) {
+            found = true;
+        }
+    }
+
+    // Si el nombre no existe (por ejemplo, un # raro en la URL), usamos la primera.
+    if (!found) {
+        name = tabButtons[0].dataset.tab;
+    }
+
+    for (const button of tabButtons) {
+        const isActive = button.dataset.tab === name;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    }
+
+    for (const panel of tabPanels) {
+        panel.classList.toggle("hidden", panel.id !== "tab-" + name);
+    }
+}
+
+for (const button of tabButtons) {
+    button.addEventListener("click", function () {
+        const name = button.dataset.tab;
+        showTab(name);
+        history.replaceState(null, "", "#" + name);
+    });
+}
+
+// Al abrir la página, mostramos la pestaña indicada en la URL (o Students).
+showTab(window.location.hash.replace("#", "") || "students");
