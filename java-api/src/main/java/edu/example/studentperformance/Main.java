@@ -29,12 +29,19 @@ public class Main {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/students", controller);
+        
         SubjectService subjectService = new SubjectService(subjectRepository);
         SubjectController subjectController = new SubjectController(subjectService);
         server.createContext("/subjects", subjectController);
+        
         CourseRepository courseRepository = new CourseRepository(database);
         CourseService courseService = new CourseService(courseRepository);
         server.createContext("/courses", new CourseController(courseService));
+
+        // --- GESTIÓN DE MATRÍCULAS E HISTORIAL (HU-02 Tarea 2) ---
+        EnrollmentService enrollmentService = new EnrollmentService(repository);
+        new EnrollmentController(enrollmentService, server);
+
         server.createContext("/", new StaticFileHandler());
         server.start();
 

@@ -126,7 +126,7 @@ public class StudentRepository {
         }
     }
 
-    private void saveEnrollments(Connection connection, int studentId, List<Enrollment> enrollments)
+    public void saveEnrollments(Connection connection, int studentId, List<Enrollment> enrollments)
             throws SQLException {
         if (enrollments == null || enrollments.isEmpty()) {
             return;
@@ -143,7 +143,7 @@ public class StudentRepository {
         }
     }
 
-    private List<Enrollment> findEnrollmentsByStudentId(Connection connection, int studentId)
+    public List<Enrollment> findEnrollmentsByStudentId(Connection connection, int studentId)
             throws SQLException {
         String sql = "SELECT e.subject_id, s.name AS subject_name, s.difficulty, e.study_hours " +
                      "FROM enrollments e " +
@@ -165,6 +165,15 @@ public class StudentRepository {
             }
         }
         return enrollments;
+    }
+
+    // Método público auxiliar para servicios externos que solo pasan el ID y la conexión
+    public List<Enrollment> findEnrollmentsByStudentId(int studentId) {
+        try (Connection connection = database.getConnection()) {
+            return findEnrollmentsByStudentId(connection, studentId);
+        } catch (SQLException exception) {
+            throw new DataAccessException("Could not find enrollments for student " + studentId, exception);
+        }
     }
 
     private double resolveStudyHours(Student student) {

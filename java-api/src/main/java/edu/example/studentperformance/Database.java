@@ -22,7 +22,7 @@ public class Database {
                         + "?useUnicode=true&characterEncoding=utf8"
                         + "&allowPublicKeyRetrieval=true&useSSL=false");
         this.user = env("DB_USER", "student");
-        this.password = env("DB_PASSWORD", "studentpass");
+        this.password = env("DB_PASSWORD", "student_password");
     }
 
     /**
