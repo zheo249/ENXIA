@@ -1,4 +1,3 @@
-
 package edu.example.studentperformance;
 
 import java.sql.Connection;
@@ -30,12 +29,6 @@ public class Database {
      * Abre una conexion nueva. Quien la pide debe cerrarla (try-with-resources).
      */
     public Connection getConnection() throws SQLException {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new SQLException("MySQL JDBC Driver not found", e);
-        }
-
         return DriverManager.getConnection(url, user, password);
     }
 

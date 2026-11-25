@@ -1,17 +1,14 @@
 package edu.example.studentperformance;
 
 /**
- * Representa la matricula de un estudiante en una asignatura concreta,
- * en un curso academico, con las horas de estudio dedicadas (HU-04)
- * y su calificacion, que puede estar pendiente (HU-02).
+ * Representa la matricula de un estudiante en una asignatura concreta
+ * junto con las horas de estudio dedicadas a ella (HU-04).
  */
 public class Enrollment {
     private int subjectId;
     private String subjectName;
     private String difficulty;
     private double studyHours;
-    private String academicYear; // formato "2025/2026"
-    private Double grade;        // null = sin calificar
 
     public Enrollment() {
     }
@@ -26,13 +23,6 @@ public class Enrollment {
         this.subjectName = subjectName;
         this.difficulty = difficulty;
         this.studyHours = studyHours;
-    }
-
-    public Enrollment(int subjectId, String subjectName, String difficulty,
-                      double studyHours, String academicYear, Double grade) {
-        this(subjectId, subjectName, difficulty, studyHours);
-        this.academicYear = academicYear;
-        this.grade = grade;
     }
 
     public int getSubjectId() {
@@ -65,21 +55,5 @@ public class Enrollment {
 
     public void setStudyHours(double studyHours) {
         this.studyHours = studyHours;
-    }
-
-    public String getAcademicYear() {
-        return academicYear;
-    }
-
-    public void setAcademicYear(String academicYear) {
-        this.academicYear = academicYear;
-    }
-
-    public Double getGrade() {
-        return grade;
-    }
-
-    public void setGrade(Double grade) {
-        this.grade = grade;
     }
 }
