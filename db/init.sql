@@ -42,5 +42,5 @@ CREATE TABLE IF NOT EXISTS enrollments (
     CONSTRAINT fk_enrollments_course FOREIGN KEY (course_id)
         REFERENCES courses (id) ON DELETE RESTRICT, -- Impide borrar un curso si tiene matrículas (HU-01)
     CONSTRAINT chk_enrollments_study_hours CHECK (study_hours >= 0),
-    CONSTRAINT chk_enrollments_grade CHECK (grade >= 0 AND grade <= 100) -- La nota debe estar entre 0 y 100 (HU-02)
+    CONSTRAINT chk_enrollments_grade CHECK (grade IS NULL OR (grade >= 0 AND grade <= 10)) -- La nota debe estar entre 0 y 10 (HU-02)
 );

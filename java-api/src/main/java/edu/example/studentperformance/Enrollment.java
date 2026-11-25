@@ -6,6 +6,9 @@ package edu.example.studentperformance;
  */
 public class Enrollment {
     private int subjectId;
+    private int courseId;
+    private String courseName;
+    private Double grade;
     private String subjectName;
     private String difficulty;
     private double studyHours;
@@ -55,5 +58,37 @@ public class Enrollment {
 
     public void setStudyHours(double studyHours) {
         this.studyHours = studyHours;
+    }
+
+    public Enrollment(int subjectId, int courseId, String courseName,
+                      String subjectName, String difficulty, double studyHours, Double grade) {
+        this(subjectId, subjectName, difficulty, studyHours);
+        this.courseId = courseId;
+        this.courseName = courseName;
+        this.grade = grade;
+    }
+
+    public int getCourseId() {
+        return courseId;
+    }
+
+    public void setCourseId(int courseId) {
+        this.courseId = courseId;
+    }
+
+    public String getCourseName() {
+        return courseName;
+    }
+
+    public void setCourseName(String courseName) {
+        this.courseName = courseName;
+    }
+
+    public Double getGrade() {
+        return grade;
+    }
+
+    public void setGrade(Double grade) {
+        this.grade = grade;
     }
 }

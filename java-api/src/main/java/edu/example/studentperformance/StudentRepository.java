@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -131,12 +132,18 @@ public class StudentRepository {
         if (enrollments == null || enrollments.isEmpty()) {
             return;
         }
-        String sql = "INSERT INTO enrollments (student_id, subject_id, study_hours) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO enrollments (student_id, subject_id, course_id, study_hours, grade) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             for (Enrollment enrollment : enrollments) {
                 statement.setInt(1, studentId);
                 statement.setInt(2, enrollment.getSubjectId());
-                statement.setDouble(3, enrollment.getStudyHours());
+                statement.setInt(3, enrollment.getCourseId());
+                statement.setDouble(4, enrollment.getStudyHours());
+                if (enrollment.getGrade() == null) {
+                    statement.setNull(5, Types.DOUBLE);
+                } else {
+                    statement.setDouble(5, enrollment.getGrade());
+                }
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -145,21 +152,28 @@ public class StudentRepository {
 
     public List<Enrollment> findEnrollmentsByStudentId(Connection connection, int studentId)
             throws SQLException {
-        String sql = "SELECT e.subject_id, s.name AS subject_name, s.difficulty, e.study_hours " +
+        String sql = "SELECT e.subject_id, e.course_id, c.name AS course_name, " +
+                     "s.name AS subject_name, s.difficulty, e.study_hours, e.grade " +
                      "FROM enrollments e " +
                      "JOIN subjects s ON e.subject_id = s.id " +
+                     "JOIN courses c ON e.course_id = c.id " +
                      "WHERE e.student_id = ? " +
-                     "ORDER BY s.id";
+                     "ORDER BY c.start_date, s.id";
         List<Enrollment> enrollments = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, studentId);
             try (ResultSet rows = statement.executeQuery()) {
                 while (rows.next()) {
+                    double gradeValue = rows.getDouble("grade");
+                    Double grade = rows.wasNull() ? null : gradeValue;
                     enrollments.add(new Enrollment(
                             rows.getInt("subject_id"),
+                            rows.getInt("course_id"),
+                            rows.getString("course_name"),
                             rows.getString("subject_name"),
                             fromDbDifficulty(rows.getString("difficulty")),
-                            rows.getDouble("study_hours")
+                            rows.getDouble("study_hours"),
+                            grade
                     ));
                 }
             }

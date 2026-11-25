@@ -8,6 +8,7 @@ const studentIdInput = document.getElementById("student-id");
 const nameInput = document.getElementById("student-name");
 const studyHoursInput = document.getElementById("study-hours");
 const studentSubjectsContainer = document.getElementById("student-subjects-container");
+const studentCourseSelect = document.getElementById("student-course");
 const formTitle = document.getElementById("form-title");
 const cancelEditButton = document.getElementById("cancel-edit");
 const studentList = document.getElementById("student-list");
@@ -31,6 +32,15 @@ const SUBJECT_LABELS = {
 
 form.addEventListener("submit", saveStudent);
 cancelEditButton.addEventListener("click", resetForm);
+studentCourseSelect.addEventListener("change", () => {
+    if (studentIdInput.value === "") {
+        return;
+    }
+    const student = findStudentById(studentIdInput.value);
+    const courseId = Number(studentCourseSelect.value);
+    const inCourse = ((student && student.enrollments) || []).filter(e => e.courseId === courseId);
+    renderStudentSubjectCheckboxes(currentSubjects, inCourse);
+});
 subjectForm.addEventListener("submit", saveSubject);
 
 // Carga inicial
@@ -142,9 +152,32 @@ function updateGeneralHoursFromEnrollments() {
     studyHoursInput.value = String(total);
 }
 
+function renderCourseOptions() {
+    const previous = studentCourseSelect.value;
+    studentCourseSelect.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "-- Select --";
+    studentCourseSelect.appendChild(placeholder);
+    for (const course of currentCourses) {
+        const option = document.createElement("option");
+        option.value = String(course.id);
+        option.textContent = course.name;
+        studentCourseSelect.appendChild(option);
+    }
+    studentCourseSelect.value = previous;
+}
+
 function collectEnrollmentsFromForm() {
     const checkboxes = document.querySelectorAll(".subject-enrollment-checkbox:checked");
     const enrollments = [];
+    const courseId = Number(studentCourseSelect.value);
+
+    if (checkboxes.length > 0 && !courseId) {
+        showMessage("Select the academic course for the chosen subjects.", true);
+        studentCourseSelect.focus();
+        return null;
+    }
 
     for (const cb of checkboxes) {
         const subjectId = Number(cb.value);
@@ -160,6 +193,7 @@ function collectEnrollmentsFromForm() {
 
         enrollments.push({
             subjectId: subjectId,
+            courseId: courseId,
             studyHours: studyHours
         });
     }
@@ -188,10 +222,32 @@ async function saveStudent(event) {
     }
 
     const id = studentIdInput.value;
+    let allEnrollments = enrollments;
+    if (id !== "") {
+        const existing = (findStudentById(id) || {}).enrollments || [];
+        const selectedCourse = Number(studentCourseSelect.value);
+        for (const enrollment of enrollments) {
+            const previous = existing.find(e =>
+                e.subjectId === enrollment.subjectId && e.courseId === enrollment.courseId);
+            if (previous && previous.grade !== null && previous.grade !== undefined) {
+                enrollment.grade = previous.grade;
+            }
+        }
+        const otherCourses = existing
+            .filter(enrollment => enrollment.courseId !== selectedCourse)
+            .map(enrollment => ({
+                subjectId: enrollment.subjectId,
+                courseId: enrollment.courseId,
+                studyHours: enrollment.studyHours,
+                grade: enrollment.grade
+            }));
+        allEnrollments = otherCourses.concat(enrollments);
+    }
+
     const student = {
         name: name,
         studyHours: generalHours,
-        enrollments: enrollments
+        enrollments: allEnrollments
     };
 
     const url = id === "" ? "/students" : "/students/" + id;
@@ -256,7 +312,9 @@ function renderStudents(students) {
             for (const enr of student.enrollments) {
                 const li = document.createElement("li");
                 const diffText = SUBJECT_LABELS[enr.difficulty] || enr.difficulty || "";
-                li.textContent = `${enr.subjectName} (${diffText}) — ${enr.studyHours} h`;
+                const courseText = enr.courseName ? ` [${enr.courseName}]` : "";
+                const gradeText = (enr.grade !== null && enr.grade !== undefined) ? ` — grade ${enr.grade}` : "";
+                li.textContent = `${enr.subjectName}${courseText} (${diffText}) — ${enr.studyHours} h${gradeText}`;
                 ul.appendChild(li);
             }
             card.appendChild(ul);
@@ -314,7 +372,13 @@ function startEdit(event) {
     studentIdInput.value = student.id;
     nameInput.value = student.name;
     studyHoursInput.value = student.studyHours;
-    renderStudentSubjectCheckboxes(currentSubjects, student.enrollments || []);
+    const studentEnrollments = student.enrollments || [];
+    const lastCourseId = studentEnrollments.length > 0
+        ? studentEnrollments[studentEnrollments.length - 1].courseId
+        : "";
+    studentCourseSelect.value = lastCourseId === "" ? "" : String(lastCourseId);
+    renderStudentSubjectCheckboxes(currentSubjects,
+        studentEnrollments.filter(enrollment => enrollment.courseId === lastCourseId));
 
     formTitle.textContent = "Edit student";
     cancelEditButton.classList.remove("hidden");
@@ -383,6 +447,7 @@ function resetForm() {
     form.reset();
     studentIdInput.value = "";
     studyHoursInput.value = "0";
+    studentCourseSelect.value = "";
     renderStudentSubjectCheckboxes(currentSubjects, []);
     formTitle.textContent = "Add student";
     cancelEditButton.classList.add("hidden");
@@ -565,6 +630,7 @@ async function loadCourses() {
         }
         const courses = await response.json();
         currentCourses = courses;
+        renderCourseOptions();
         renderCourses(courses);
     } catch (error) {
         showCourseMessage("Could not load academic courses.", true);

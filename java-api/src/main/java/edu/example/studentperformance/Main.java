@@ -15,6 +15,7 @@ public class Main {
         Database database = new Database();
         StudentRepository repository = new StudentRepository(database);
         SubjectRepository subjectRepository = new SubjectRepository(database);
+        CourseRepository courseRepository = new CourseRepository(database);
 
         // en desarrollo local se utiliza localhost.
         String predictionServiceUrl = System.getenv("PYTHON_SERVICE_URL");
@@ -24,7 +25,7 @@ public class Main {
             predictionServiceUrl = "http://localhost:8000";
         }
         PredictionClient predictionClient = new PredictionClient(predictionServiceUrl);
-        StudentService service = new StudentService(repository, subjectRepository, predictionClient);
+        StudentService service = new StudentService(repository, subjectRepository, courseRepository, predictionClient);
         StudentController controller = new StudentController(service);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
@@ -34,7 +35,6 @@ public class Main {
         SubjectController subjectController = new SubjectController(subjectService);
         server.createContext("/subjects", subjectController);
         
-        CourseRepository courseRepository = new CourseRepository(database);
         CourseService courseService = new CourseService(courseRepository);
         server.createContext("/courses", new CourseController(courseService));
 

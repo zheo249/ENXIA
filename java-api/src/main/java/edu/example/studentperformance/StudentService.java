@@ -11,11 +11,14 @@ import java.util.Set;
 public class StudentService {
     private final StudentRepository repository;
     private final SubjectRepository subjectRepository;
+    private final CourseRepository courseRepository;
     private final PredictionClient predictionClient;
 
-    public StudentService(StudentRepository repository, SubjectRepository subjectRepository, PredictionClient predictionClient) {
+    public StudentService(StudentRepository repository, SubjectRepository subjectRepository,
+                          CourseRepository courseRepository, PredictionClient predictionClient) {
         this.repository = repository;
         this.subjectRepository = subjectRepository;
+        this.courseRepository = courseRepository;
         this.predictionClient = predictionClient;
     }
 
@@ -159,18 +162,28 @@ public class StudentService {
             return false;
         }
         if (student.getEnrollments() != null) {
-            Set<Integer> seenSubjects = new HashSet<>();
+            Set<String> seenEnrollments = new HashSet<>();
             for (Enrollment enrollment : student.getEnrollments()) {
                 if (enrollment == null) {
                     return false;
                 }
-                if (enrollment.getSubjectId() <= 0 || !seenSubjects.add(enrollment.getSubjectId())) {
+                if (enrollment.getSubjectId() <= 0 || enrollment.getCourseId() <= 0) {
+                    return false;
+                }
+                if (!seenEnrollments.add(enrollment.getSubjectId() + ":" + enrollment.getCourseId())) {
+                    return false;
+                }
+                Double grade = enrollment.getGrade();
+                if (grade != null && (grade.isNaN() || grade < 0 || grade > 10)) {
                     return false;
                 }
                 if (Double.isNaN(enrollment.getStudyHours()) || enrollment.getStudyHours() < 0) {
                     return false;
                 }
                 if (subjectRepository.findById(enrollment.getSubjectId()) == null) {
+                    return false;
+                }
+                if (courseRepository.findById(enrollment.getCourseId()) == null) {
                     return false;
                 }
             }
