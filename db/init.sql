@@ -16,22 +16,16 @@ CREATE TABLE IF NOT EXISTS subjects (
     difficulty ENUM('facil', 'media', 'dificil') NOT NULL
 );
 
--- Matricula: un estudiante cursa una asignatura en un curso academico concreto.
--- Un mismo estudiante puede repetir asignatura en cursos distintos (HU-02),
--- por eso el curso forma parte de la clave primaria.
--- grade es NULL mientras la matricula no tenga calificacion.
+-- Matricula: relacion N:M entre estudiantes y asignaturas.
+-- Cada fila guarda las horas de estudio de ese estudiante en esa asignatura.
 CREATE TABLE IF NOT EXISTS enrollments (
-    student_id    INT          NOT NULL,
-    subject_id    INT          NOT NULL,
-    academic_year VARCHAR(9)   NOT NULL,
-    study_hours   DOUBLE       NOT NULL DEFAULT 0,
-    grade         DECIMAL(4,2) NULL,
-    PRIMARY KEY (student_id, subject_id, academic_year),
+    student_id  INT    NOT NULL,
+    subject_id  INT    NOT NULL,
+    study_hours DOUBLE NOT NULL DEFAULT 0,
+    PRIMARY KEY (student_id, subject_id),
     CONSTRAINT fk_enrollments_student FOREIGN KEY (student_id)
         REFERENCES students (id) ON DELETE CASCADE,
     CONSTRAINT fk_enrollments_subject FOREIGN KEY (subject_id)
         REFERENCES subjects (id) ON DELETE CASCADE,
-    CONSTRAINT chk_enrollments_study_hours CHECK (study_hours >= 0),
-    CONSTRAINT chk_enrollments_grade CHECK (grade IS NULL OR (grade >= 0 AND grade <= 10)),
-    CONSTRAINT chk_enrollments_academic_year CHECK (academic_year REGEXP '^[0-9]{4}/[0-9]{4}$')
+    CONSTRAINT chk_enrollments_study_hours CHECK (study_hours >= 0)
 );
