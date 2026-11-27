@@ -1,5 +1,8 @@
 package edu.example.studentperformance;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -11,6 +14,7 @@ import java.util.List;
 
 public class EnrollmentController implements HttpHandler {
     private final EnrollmentService enrollmentService;
+    private final Gson gson = new Gson();
 
     public EnrollmentController(EnrollmentService enrollmentService, HttpServer server) {
         this.enrollmentService = enrollmentService;
@@ -37,20 +41,42 @@ public class EnrollmentController implements HttpHandler {
 
                 if (method.equalsIgnoreCase("GET")) {
                     List<Enrollment> enrollments = enrollmentService.getStudentEnrollments(studentId);
-                    sendResponse(exchange, 200, toJson(enrollments));
+                    sendResponse(exchange, 200, gson.toJson(enrollments));
                 } else if (method.equalsIgnoreCase("POST")) {
                     String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                     Enrollment enrollment = parseEnrollmentFromJson(body);
                     enrollmentService.createEnrollment(studentId, enrollment);
-                    sendResponse(exchange, 201, "{\"message\": \"Matrícula creada con éxito\"}");
+                    sendResponse(exchange, 201, "{\"message\":\"Matrícula creada con éxito\"}");
                 } else {
                     sendResponse(exchange, 405, "{\"error\": \"Método no permitido\"}");
                 }
+            } else if (path.matches("^/api/students/\\d+/enrollments/\\d+/\\d+$")
+                    && method.equalsIgnoreCase("PUT")) {
+                String[] parts = path.split("/");
+                int studentId = Integer.parseInt(parts[3]);
+                int subjectId = Integer.parseInt(parts[5]);
+                int courseId = Integer.parseInt(parts[6]);
+                String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                JsonObject request = gson.fromJson(body, JsonObject.class);
+                Double grade = null;
+                if (request != null && request.has("grade") && !request.get("grade").isJsonNull()) {
+                    grade = request.get("grade").getAsDouble();
+                }
+                enrollmentService.updateGrade(studentId, subjectId, courseId, grade);
+                sendResponse(exchange, 200, "{\"message\":\"Calificación actualizada\"}");
             } else {
-                exchange.sendResponseHeaders(404, -1);
+                sendResponse(exchange, 404, "{\"error\":\"Ruta no encontrada\"}");
             }
+        } catch (JsonParseException | NumberFormatException e) {
+            sendResponse(exchange, 400, "{\"error\":\"Datos JSON o identificadores no válidos\"}");
         } catch (IllegalArgumentException e) {
             sendResponse(exchange, 400, "{\"error\": \"" + e.getMessage() + "\"}");
+        } catch (NotFoundException e) {
+            sendResponse(exchange, 404, "{\"error\":\"" + e.getMessage() + "\"}");
+        } catch (ConflictException e) {
+            sendResponse(exchange, 409, "{\"error\":\"" + e.getMessage() + "\"}");
+        } catch (DataAccessException e) {
+            sendResponse(exchange, 503, "{\"error\":\"Base de datos no disponible\"}");
         } catch (Exception e) {
             sendResponse(exchange, 500, "{\"error\": \"" + e.getMessage() + "\"}");
         }
@@ -71,21 +97,6 @@ public class EnrollmentController implements HttpHandler {
     }
 
     private Enrollment parseEnrollmentFromJson(String json) {
-        Enrollment e = new Enrollment();
-        // Ajusta según los campos que reciba el JSON de la HU-02
-        return e;
-    }
-
-    private String toJson(List<Enrollment> enrollments) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < enrollments.size(); i++) {
-            Enrollment e = enrollments.get(i);
-            sb.append("{")
-              .append("\"subjectId\":").append(e.getSubjectId())
-              .append("}");
-            if (i < enrollments.size() - 1) sb.append(",");
-        }
-        sb.append("]");
-        return sb.toString();
+        return gson.fromJson(json, Enrollment.class);
     }
 }

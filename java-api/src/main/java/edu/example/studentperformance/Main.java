@@ -39,7 +39,8 @@ public class Main {
         server.createContext("/courses", new CourseController(courseService));
 
         // --- GESTIÓN DE MATRÍCULAS E HISTORIAL (HU-02 Tarea 2) ---
-        EnrollmentService enrollmentService = new EnrollmentService(repository);
+        EnrollmentService enrollmentService =
+                new EnrollmentService(repository, subjectRepository, courseRepository);
         new EnrollmentController(enrollmentService, server);
 
         server.createContext("/", new StaticFileHandler());

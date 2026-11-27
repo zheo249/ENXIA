@@ -78,7 +78,10 @@ function renderStudentSubjectCheckboxes(subjects, selectedEnrollments = []) {
 
     const enrollmentMap = new Map();
     for (const enr of selectedEnrollments) {
-        enrollmentMap.set(enr.subjectId, enr.studyHours);
+        enrollmentMap.set(enr.subjectId, {
+            studyHours: enr.studyHours,
+            grade: enr.grade
+        });
     }
 
     for (const subject of subjects) {
@@ -112,11 +115,26 @@ function renderStudentSubjectCheckboxes(subjects, selectedEnrollments = []) {
         hoursInput.id = `enrollment-hours-${subject.id}`;
         hoursInput.disabled = !isSelected;
         if (isSelected) {
-            hoursInput.value = String(enrollmentMap.get(subject.id));
+            hoursInput.value = String(enrollmentMap.get(subject.id).studyHours);
+        }
+
+        const gradeInput = document.createElement("input");
+        gradeInput.type = "number";
+        gradeInput.min = "0";
+        gradeInput.max = "10";
+        gradeInput.step = "0.1";
+        gradeInput.placeholder = "Grade";
+        gradeInput.className = "enrollment-grade-input";
+        gradeInput.id = `enrollment-grade-${subject.id}`;
+        gradeInput.disabled = !isSelected;
+        if (isSelected && enrollmentMap.get(subject.id).grade !== null
+                && enrollmentMap.get(subject.id).grade !== undefined) {
+            gradeInput.value = String(enrollmentMap.get(subject.id).grade);
         }
 
         checkbox.addEventListener("change", () => {
             hoursInput.disabled = !checkbox.checked;
+            gradeInput.disabled = !checkbox.checked;
             if (checkbox.checked) {
                 if (hoursInput.value === "") {
                     hoursInput.value = "0";
@@ -132,6 +150,7 @@ function renderStudentSubjectCheckboxes(subjects, selectedEnrollments = []) {
 
         row.appendChild(label);
         row.appendChild(hoursInput);
+        row.appendChild(gradeInput);
         studentSubjectsContainer.appendChild(row);
     }
 }
@@ -191,10 +210,23 @@ function collectEnrollmentsFromForm() {
             return null;
         }
 
+        const gradeEl = document.getElementById(`enrollment-grade-${subjectId}`);
+        const rawGrade = gradeEl.value.trim();
+        let grade = null;
+        if (rawGrade !== "") {
+            grade = Number(rawGrade);
+            if (isNaN(grade) || grade < 0 || grade > 10) {
+                showMessage("Grade for each selected subject must be between 0 and 10.", true);
+                gradeEl.focus();
+                return null;
+            }
+        }
+
         enrollments.push({
             subjectId: subjectId,
             courseId: courseId,
-            studyHours: studyHours
+            studyHours: studyHours,
+            grade: grade
         });
     }
 
@@ -229,7 +261,8 @@ async function saveStudent(event) {
         for (const enrollment of enrollments) {
             const previous = existing.find(e =>
                 e.subjectId === enrollment.subjectId && e.courseId === enrollment.courseId);
-            if (previous && previous.grade !== null && previous.grade !== undefined) {
+            if (enrollment.grade === null
+                    && previous && previous.grade !== null && previous.grade !== undefined) {
                 enrollment.grade = previous.grade;
             }
         }

@@ -94,12 +94,7 @@ public class StudentRepository {
                 statement.setDouble(2, totalHours);
                 statement.setInt(3, id);
                 statement.executeUpdate();
-
-                try (PreparedStatement deleteStmt =
-                             connection.prepareStatement("DELETE FROM enrollments WHERE student_id = ?")) {
-                    deleteStmt.setInt(1, id);
-                    deleteStmt.executeUpdate();
-                }
+                reconcileEnrollments(connection, id, student.getEnrollments());
                 saveEnrollments(connection, id, student.getEnrollments());
                 connection.commit();
 
@@ -116,6 +111,36 @@ public class StudentRepository {
         }
     }
 
+    private void reconcileEnrollments(Connection connection, int studentId, List<Enrollment> enrollments)
+            throws SQLException {
+        List<String> keepKeys = new ArrayList<>();
+        if (enrollments != null) {
+            for (Enrollment enrollment : enrollments) {
+                keepKeys.add(enrollment.getSubjectId() + ":" + enrollment.getCourseId());
+            }
+        }
+
+        try (PreparedStatement select =
+                     connection.prepareStatement(
+                             "SELECT subject_id, course_id FROM enrollments WHERE student_id = ?");
+             PreparedStatement delete =
+                     connection.prepareStatement(
+                             "DELETE FROM enrollments WHERE student_id = ? AND subject_id = ? AND course_id = ?")) {
+            select.setInt(1, studentId);
+            try (ResultSet rows = select.executeQuery()) {
+                while (rows.next()) {
+                    String key = rows.getInt("subject_id") + ":" + rows.getInt("course_id");
+                    if (!keepKeys.contains(key)) {
+                        delete.setInt(1, studentId);
+                        delete.setInt(2, rows.getInt("subject_id"));
+                        delete.setInt(3, rows.getInt("course_id"));
+                        delete.executeUpdate();
+                    }
+                }
+            }
+        }
+    }
+
     public boolean delete(int id) {
         String sql = "DELETE FROM students WHERE id = ?";
         try (Connection connection = database.getConnection();
@@ -127,12 +152,33 @@ public class StudentRepository {
         }
     }
 
+    public boolean updateEnrollmentGrade(int studentId, int subjectId, int courseId, Double grade) {
+        String sql = "UPDATE enrollments SET grade = ? WHERE student_id = ? AND subject_id = ? AND course_id = ?";
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (grade == null) {
+                statement.setNull(1, Types.DOUBLE);
+            } else {
+                statement.setDouble(1, grade);
+            }
+            statement.setInt(2, studentId);
+            statement.setInt(3, subjectId);
+            statement.setInt(4, courseId);
+            return statement.executeUpdate() > 0;
+        } catch (SQLException exception) {
+            throw new DataAccessException("Could not update enrollment grade", exception);
+        }
+    }
+
     public void saveEnrollments(Connection connection, int studentId, List<Enrollment> enrollments)
             throws SQLException {
         if (enrollments == null || enrollments.isEmpty()) {
             return;
         }
-        String sql = "INSERT INTO enrollments (student_id, subject_id, course_id, study_hours, grade) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO enrollments (student_id, subject_id, course_id, study_hours, grade) " +
+                     "VALUES (?, ?, ?, ?, ?) " +
+                     "ON DUPLICATE KEY UPDATE study_hours = VALUES(study_hours), " +
+                     "grade = CASE WHEN VALUES(grade) IS NULL THEN enrollments.grade ELSE VALUES(grade) END";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             for (Enrollment enrollment : enrollments) {
                 statement.setInt(1, studentId);

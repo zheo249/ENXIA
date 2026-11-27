@@ -81,6 +81,10 @@ select {
     width: 110px !important;
 }
 
+.enrollment-grade-input {
+    width: 90px !important;
+}
+
 .enrollment-list {
     margin: 6px 0 8px 18px;
     padding: 0;
